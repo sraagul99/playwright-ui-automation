@@ -37,19 +37,34 @@ export class PIMPage {
   ): Promise<void> {
     await this.page.getByRole('link', { name: 'PIM', exact: true }).click();
 
-    // The list filter uses the user-facing Employee Id, which may differ from
+    // The list filter uses the user-facing Employee Id, which can differ from
     // the internal empNumber in the profile URL. Capture it from the form.
     await expect(this.employeeIdInput).toBeVisible();
     await this.employeeIdInput.fill(employeeId);
-    await this.page.getByRole('button', { name: 'Search', exact: true }).click();
 
+    const searchButton = this.page.getByRole('button', { name: 'Search', exact: true });
     const employeeRow = this.page
       .getByRole('row')
       .filter({ hasText: employeeId })
       .filter({ hasText: firstName })
       .filter({ hasText: lastName });
 
-    await expect(employeeRow).toHaveCount(1);
+    // The demo list can briefly return "No Records Found" immediately after
+    // creation. Retry the targeted search while waiting for the exact record.
+    await expect
+      .poll(
+        async () => {
+          await searchButton.click();
+          return employeeRow.count();
+        },
+        {
+          message: 'The newly created employee should appear in the filtered list',
+          timeout: 15_000,
+          intervals: [500, 1_000, 1_500, 2_000],
+        },
+      )
+      .toBe(1);
+
     await employeeRow.locator('button').nth(1).click();
     await this.page.getByRole('button', { name: /yes,\s*delete/i }).click();
     await expect(employeeRow).toHaveCount(0);
