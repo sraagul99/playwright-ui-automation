@@ -66,7 +66,7 @@ playwright-ui-automation/
 
 ```bash
 npm install
-npx playwright install --with-deps chromium
+npx playwright install chromium
 cp .env.example .env
 ```
 
